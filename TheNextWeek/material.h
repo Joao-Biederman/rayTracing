@@ -142,5 +142,64 @@ class isotropic : public material {
     shared_ptr<texture> tex;
 };
 
+class snowball : public material {
+  public:
+    snowball() : albedo(color(0.9, 0.95, 1.0)) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    const override {
+        auto scatter_direction = rec.normal + random_unit_vector();
+        if (scatter_direction.near_zero())
+            scatter_direction = rec.normal;
+            
+        scattered = ray(rec.p, scatter_direction);
+
+        const double white_bias = 0.3; // Ajuste este valor (0.0 a 1.0)
+        attenuation = (1.0 - white_bias) * albedo + white_bias * color(1.0, 1.0, 1.0);
+
+        // attenuation = albedo;
+        return true;
+    }
+  private:
+    color albedo;
+};
+
+class snow : public material {
+  public:
+    snow() : albedo(color(0.65, 0.7, 0.8)) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    const override {
+        auto scatter_direction = rec.normal + random_unit_vector();
+        if (scatter_direction.near_zero())
+            scatter_direction = rec.normal;
+            
+        scattered = ray(rec.p, scatter_direction);
+
+        const double white_bias = 0.3; // Ajuste este valor (0.0 a 1.0)
+        attenuation = (1.0 - white_bias) * albedo + white_bias * color(1.0, 1.0, 1.0);
+
+        // attenuation = albedo;
+        return true;
+    }
+  private:
+    color albedo;
+};
+
+class rock : public material {
+  public:
+    rock() : albedo(color(0.3, 0.3, 0.3)), fuzz(0.01) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    const override {
+        vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
+        scattered = ray(rec.p, reflected + fuzz*random_unit_vector());
+        attenuation = albedo;
+        return (dot(scattered.direction(), rec.normal) > 0);
+    }
+  private:
+    color albedo;
+    double fuzz;
+};
 
 #endif

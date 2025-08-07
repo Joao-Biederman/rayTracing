@@ -17,63 +17,100 @@
 #include "material.h"
 #include "sphere.h"
 
-
 int main() {
     hittable_list world;
 
-    auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
+    world.add(make_shared<sphere>(point3(-15, 5, -9), 3, make_shared<sun>()));
+
+    auto ground_material = make_shared<snow>();
     world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
+    world.add(make_shared<sphere>(point3(-8,-2,-4), 3, ground_material));
+    world.add(make_shared<sphere>(point3(-10,-3,-10), 5, ground_material));
+    world.add(make_shared<sphere>(point3(-6, 0, 6), 2, ground_material));
+    world.add(make_shared<sphere>(point3(-3, -0.5, 8), 1, ground_material));
+    world.add(make_shared<sphere>(point3(-3, -3, 6), 5, ground_material));
+    
+    world.add(make_shared<sphere>(point3(-13, -5, 7), 8, ground_material));
+    
+    world.add(make_shared<sphere>(point3(-3, -2, 5), 4, ground_material));
+    world.add(make_shared<sphere>(point3(-3, -0.4, -1), 1, ground_material));
 
-    for (int a = -11; a < 11; a++) {
-        for (int b = -11; b < 11; b++) {
-            auto choose_mat = random_double();
-            point3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
 
-            if ((center - point3(4, 0.2, 0)).length() > 0.9) {
-                shared_ptr<material> sphere_material;
+    auto snowballs = make_shared<snowball>();
+    world.add(make_shared<sphere>(point3(-5, 0.55, 0), 0.6, snowballs));
 
-                if (choose_mat < 0.8) {
-                    // diffuse
-                    auto albedo = color::random() * color::random();
-                    sphere_material = make_shared<lambertian>(albedo);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                } else if (choose_mat < 0.95) {
-                    // metal
-                    auto albedo = color::random(0.5, 1);
-                    auto fuzz = random_double(0, 0.5);
-                    sphere_material = make_shared<metal>(albedo, fuzz);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                } else {
-                    // glass
-                    sphere_material = make_shared<dielectric>(1.5);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
-                }
-            }
-        }
-    }
+    world.add(make_shared<sphere>(point3(-5, 1.3, 0), 0.4, snowballs));
 
-    auto albedo = (color::random() * color::random());
-    auto sphere_material = make_shared<lambertian>(albedo);
-    world.add(make_shared<sphere>(point3(2, 1, 0), 1.6, sphere_material));
+    world.add(make_shared<sphere>(point3(-5, 1.8, 0), 0.3, snowballs));
 
-    world.add(make_shared<sphere>(point3(2, 2.4, 0), 1.4, sphere_material));
-
-    world.add(make_shared<sphere>(point3(2, 3.2, 0), 1.0, sphere_material));
+    auto stones = make_shared<rock>();
+    world.add(make_shared<sphere>(point3(-4.4, 0.55, 0), 0.1, stones));
+    world.add(make_shared<sphere>(point3(-4.6, 1.3, 0), 0.1, stones));
+    world.add(make_shared<sphere>(point3(-4.8, 1.9, 0.2), 0.1, stones));
+    world.add(make_shared<sphere>(point3(-4.8, 1.9, -0.2), 0.1, stones));
 
     camera cam;
 
     cam.aspect_ratio      = 16.0 / 9.0;
     cam.image_width       = 1200;
     cam.samples_per_pixel = 10;
-    cam.max_depth         = 20;
+    cam.max_depth         = 30;
 
     cam.vfov     = 20;
     cam.lookfrom = point3(13,2,3);
-    cam.lookat   = point3(0,0,0);
+    cam.lookat   = point3(0,2,0);
     cam.vup      = vec3(0,1,0);
+
+    cam.defocus_angle = 0.6;
+    cam.focus_dist    = 15.0;
+
+    cam.render(world, "snowman1.ppm");
+
+    cam.samples_per_pixel = 30;
+    cam.render(world, "snowman1-1.ppm");
+    //===========================================================\\ 
+    
+    cam.samples_per_pixel = 10;
+    cam.vfov     = 50;
+    cam.lookfrom = point3(13,2,3);
+    cam.lookat   = point3(0,2,0);
 
     cam.defocus_angle = 0.6;
     cam.focus_dist    = 10.0;
 
-    cam.render(world);
+    cam.render(world, "snowman2.ppm");
+
+    //===========================================================\\ 
+
+    cam.vfov     = 50;
+    cam.lookfrom = point3(5,0.5,-13);
+    cam.lookat   = point3(-5,3,2);
+    cam.defocus_angle = 0.6;
+    cam.focus_dist    = 10.0;
+
+    cam.render(world, "snowman3.ppm");
+
+    //===========================================================\\ 
+
+    cam.vfov     = 90;
+    cam.lookfrom = point3(-5,12,1);
+    cam.lookat   = point3(-5,1,-1);
+
+    cam.defocus_angle = 0.6;
+    cam.focus_dist    = 8.0;
+
+    cam.render(world, "snowman4.ppm");
+
+    //===========================================================\\ 
+
+    cam.vfov     = 90;
+    cam.lookfrom = point3(-3,8,8);
+    cam.lookat   = point3(1,1,-1);
+
+    cam.defocus_angle = 0.8;
+    cam.focus_dist    = 3.0;
+
+    cam.render(world, "snowman5.ppm");
+
+
 }

@@ -15,6 +15,10 @@
 #include "pdf.h"
 #include "material.h"
 
+#include <thread>
+#include <vector>
+#include <iostream>
+#include <fstream>
 
 class camera {
   public:
@@ -32,27 +36,58 @@ class camera {
     double defocus_angle = 0;  // Variation angle of rays through each pixel
     double focus_dist = 10;    // Distance from camera lookfrom point to plane of perfect focus
 
-    void render(const hittable& world, const hittable& lights) {
-        initialize();
+    void render(const hittable& world, const hittable& lights, const std::string& filename) {
+    initialize();
 
-        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+    std::ofstream output_file(filename);
+    if (!output_file.is_open()) {
+        std::cerr << "Erro: Não foi possível abrir o arquivo de saída." << std::endl;
+        return;
+    }
 
-        for (int j = 0; j < image_height; j++) {
-            std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
-            for (int i = 0; i < image_width; i++) {
-                color pixel_color(0,0,0);
+    output_file << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+    const int num_threads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+    std::vector<color> pixel_buffer(image_width * image_height);
+
+    auto render_slice = [&](int start_j, int end_j) {
+        for (int j = start_j; j < end_j; ++j) {
+            for (int i = 0; i < image_width; ++i) {
+                color pixel_color(0, 0, 0);
                 for (int s_j = 0; s_j < sqrt_spp; s_j++) {
                     for (int s_i = 0; s_i < sqrt_spp; s_i++) {
                         ray r = get_ray(i, j, s_i, s_j);
+                        // A única mudança: passar 'lights' para ray_color
                         pixel_color += ray_color(r, max_depth, world, lights);
                     }
                 }
-                write_color(std::cout, pixel_samples_scale * pixel_color);
+                pixel_buffer[j * image_width + i] = pixel_samples_scale * pixel_color;
             }
         }
+    };
 
-        std::clog << "\rDone.                 \n";
+    int slice_height = image_height / num_threads;
+    for (int t = 0; t < num_threads; ++t) {
+        int start_j = t * slice_height;
+        int end_j = (t == num_threads - 1) ? image_height : start_j + slice_height;
+        threads.emplace_back(render_slice, start_j, end_j);
     }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // Escrever o buffer no arquivo de saída
+    for (int j = 0; j < image_height; ++j) {
+        std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            write_color(output_file, pixel_buffer[j * image_width + i]);
+        }
+    }
+
+    std::clog << "\rDone.          \n";
+}
 
   private:
     int    image_height;         // Rendered image height

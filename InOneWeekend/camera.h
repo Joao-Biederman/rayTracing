@@ -17,6 +17,7 @@
 #include <thread>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 class camera {
   public:
@@ -33,20 +34,52 @@ class camera {
     double defocus_angle = 0;  // Variation angle of rays through each pixel
     double focus_dist = 10;    // Distance from camera lookfrom point to plane of perfect focus
 
-    void render(const hittable& world) {
+    void render(const hittable& world, const std::string& filename) {
         initialize();
 
-        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+        std::ofstream output_file(filename);
+        if (!output_file.is_open()) {
+            std::cerr << "Erro: Não foi possível abrir o arquivo de saída " << filename << std::endl;
+            return;
+        }
 
-        for (int j = 0; j < image_height; j++) {
-            std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
-            for (int i = 0; i < image_width; i++) {
-                color pixel_color(0,0,0);
-                for (int sample = 0; sample < samples_per_pixel; sample++) {
-                    ray r = get_ray(i, j);
-                    pixel_color += ray_color(r, max_depth, world);
+
+        output_file << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+        const int num_threads = std::thread::hardware_concurrency();
+        std::vector<std::thread> threads;
+
+
+        std::vector<color> pixel_buffer(image_width * image_height);
+
+        auto render_slice = [&](int start_j, int end_j) {
+            for (int j = start_j; j < end_j; ++j) {
+                for (int i = 0; i < image_width; ++i) {
+                    color pixel_color(0,0,0);
+                    for (int sample = 0; sample < samples_per_pixel; ++sample) {
+                        ray r = get_ray(i, j);
+                        pixel_color += ray_color(r, max_depth, world);
+                    }
+                    pixel_buffer[j * image_width + i] = pixel_samples_scale * pixel_color;
                 }
-                write_color(std::cout, pixel_samples_scale * pixel_color);
+            }
+        };
+
+        int slice_height = image_height / num_threads;
+        for (int t = 0; t < num_threads; ++t) {
+            int start_j = t * slice_height;
+            int end_j = (t == num_threads - 1) ? image_height : start_j + slice_height;
+            threads.emplace_back(render_slice, start_j, end_j);
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        for (int j = 0; j < image_height; ++j) {
+            std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
+            for (int i = 0; i < image_width; ++i) {
+                write_color(output_file, pixel_buffer[j * image_width + i]);
             }
         }
 
