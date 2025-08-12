@@ -21,16 +21,23 @@
 int main() {
     hittable_list world;
 
+    std::cout << "Creating sun" << std::endl;
     auto sun_color = make_shared<solid_color>(color(3, 2.5, 2));
     auto sun_material = make_shared<diffuse_light>(sun_color);
     world.add(make_shared<sphere>(point3(-15, 70, -9), 40, sun_material));
 
+    std::cout << "Creating sky" << std::endl;
     auto sky_color = make_shared<solid_color>(color(0.5, 0.7, 1.0));
     auto sky_box = make_shared<lambertian>(sky_color);
     world.add(make_shared<quad>(point3(-40, -5, 15), vec3(0, 0, -50), vec3(0, 30, 0), sky_box));
 
-    auto ground_material = make_shared<snow>();
-    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
+    std::cout << "Creating ground" << std::endl;
+    auto snow_texture = make_shared<image_texture>("snow.jpg");
+    auto ground_material = make_shared<lambertian>(snow_texture);
+    auto ground = make_shared<quad>(point3(-500, -500, -500), vec3(500, 500, 500), vec3(0, 0, -50), ground_material);
+    
+    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, make_shared<snow>()));
+
     world.add(make_shared<sphere>(point3(-8,-2,-4), 3, ground_material));
     world.add(make_shared<sphere>(point3(-10,-3,-10), 5, ground_material));
     world.add(make_shared<sphere>(point3(-6, 0, 6), 2, ground_material));
@@ -42,7 +49,9 @@ int main() {
     world.add(make_shared<sphere>(point3(-3, -2, 5), 4, ground_material));
     world.add(make_shared<sphere>(point3(-3, -0.4, -1), 1, ground_material));
 
-    auto snowballs = make_shared<snowball>();
+    std::cout << "Creating snowman" << std::endl;
+    auto snowball_texture = make_shared<image_texture>("snowball.jpg");
+    auto snowballs = make_shared<lambertian>(snowball_texture);
     world.add(make_shared<sphere>(point3(-5, 0.55, 0), 0.6, snowballs));
     world.add(make_shared<sphere>(point3(-5, 1.3, 0), 0.4, snowballs));
     world.add(make_shared<sphere>(point3(-5, 1.8, 0), 0.3, snowballs));
@@ -67,9 +76,11 @@ int main() {
     cam.defocus_angle = 0.6;
     cam.focus_dist    = 15.0;
 
+    std::cout << "Rendering snowman scene..." << std::endl;
+
     cam.render(world, "snowman1.ppm");
 
-    cam.samples_per_pixel = 30;
+    cam.samples_per_pixel = 200;
     cam.render(world, "snowman1-1.ppm");
     //===========================================================\\ 
     
