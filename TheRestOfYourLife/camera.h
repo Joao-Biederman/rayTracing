@@ -58,7 +58,6 @@ class camera {
                 for (int s_j = 0; s_j < sqrt_spp; s_j++) {
                     for (int s_i = 0; s_i < sqrt_spp; s_i++) {
                         ray r = get_ray(i, j, s_i, s_j);
-                        // A única mudança: passar 'lights' para ray_color
                         pixel_color += ray_color(r, max_depth, world, lights);
                     }
                 }

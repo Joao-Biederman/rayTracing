@@ -169,5 +169,74 @@ class isotropic : public material {
     shared_ptr<texture> tex;
 };
 
+class snowball : public material {
+  public:
+    snowball() : albedo(color(0.9, 0.95, 1.0)) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec) const override {
+        srec.attenuation = albedo;
+        srec.pdf_ptr = make_shared<cosine_pdf>(rec.normal);
+        srec.skip_pdf = false;
+        return true;
+    }
+
+    double scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const override {
+        auto cos_theta = dot(rec.normal, unit_vector(scattered.direction()));
+        return cos_theta < 0 ? 0 : cos_theta / pi;
+    }
+    
+  private:
+    color albedo;
+};
+
+class snow : public material {
+  public:
+    snow() : albedo(color(0.65, 0.7, 0.8)) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec) const override {
+        const double white_bias = 0.3;
+        srec.attenuation = (1.0 - white_bias) * albedo + white_bias * color(1.0, 1.0, 1.0);
+        
+        srec.pdf_ptr = make_shared<cosine_pdf>(rec.normal);
+        srec.skip_pdf = false;
+        
+        return true;
+    }
+
+    double scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const override {
+        auto cos_theta = dot(rec.normal, unit_vector(scattered.direction()));
+        return cos_theta < 0 ? 0 : cos_theta / pi;
+    }
+    
+  private:
+    color albedo;
+};
+
+class rock : public material {
+  public:
+    rock() : albedo(color(0.3, 0.3, 0.3)), fuzz(0.01) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec) const override {
+        vec3 reflected_direction = reflect(unit_vector(r_in.direction()), rec.normal);
+        
+        vec3 scattered_direction = reflected_direction + fuzz * random_unit_vector();
+        
+        srec.attenuation = albedo;
+        srec.skip_pdf = true;
+        srec.skip_pdf_ray = ray(rec.p, scattered_direction, r_in.time());
+
+        return dot(srec.skip_pdf_ray.direction(), rec.normal) > 0;
+    }
+
+    double scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const override {
+        return 0;
+    }
+
+  private:
+    color albedo;
+    double fuzz;
+};
+
+
 
 #endif
